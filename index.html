@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Radar° LATAM — Seguimiento de eventos tech</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#F4F8F5;
+    --bg-panel:#FFFFFF;
+    --bg-panel-2:#F0F5F1;
+    --line:#DCE7DE;
+    --line-soft:#E9F1EA;
+    --amber:#D99A2B;
+    --coral:#E0654F;
+    --teal:#3E9C6F;
+    --danger:#D14B43;
+    --text:#152A1E;
+    --text-muted:#6B7C71;
+    --radius:10px;
+    --periferia-green:#1F6B3F;
+    --periferia-green-dark:#154D2C;
+    --periferia-mint:#8FC9A6;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(circle 260px at 8% 6%, rgba(31,107,63,0.10), transparent 70%),
+      radial-gradient(circle 180px at 14% 16%, rgba(143,201,166,0.16), transparent 70%),
+      radial-gradient(circle 340px at 96% 0%, rgba(31,107,63,0.07), transparent 65%),
+      radial-gradient(circle 200px at 90% 85%, rgba(143,201,166,0.14), transparent 70%),
+      var(--bg);
+    color:var(--text);
+    font-family:'IBM Plex Sans', sans-serif;
+    min-height:100vh;
+    padding:28px 20px 60px;
+  }
+  .wrap{max-width:1240px;margin:0 auto;}
+
+  /* Header */
+  header{
+    display:flex;justify-content:space-between;align-items:flex-end;gap:20px;
+    flex-wrap:wrap;margin-bottom:22px;padding-bottom:20px;border-bottom:1px solid var(--line);
+  }
+  .brand-eyebrow{
+    font-family:'IBM Plex Mono', monospace;font-size:11px;letter-spacing:.18em;
+    color:var(--periferia-green);text-transform:uppercase;margin:0 0 6px;
+  }
+  h1{
+    font-family:'Space Grotesk', sans-serif;font-weight:700;font-size:32px;margin:0;
+    letter-spacing:-0.01em;
+  }
+  h1 span{color:var(--periferia-green);}
+  .subtitle{color:var(--text-muted);font-size:14px;margin-top:6px;max-width:520px;}
+
+  .actions{display:flex;gap:10px;flex-wrap:wrap;}
+  button, .btn{
+    font-family:'IBM Plex Sans', sans-serif;font-size:13.5px;font-weight:500;
+    border-radius:8px;border:1px solid var(--line);background:var(--bg-panel-2);
+    color:var(--text);padding:10px 16px;cursor:pointer;transition:border-color .15s, transform .1s;
+    display:inline-flex;align-items:center;gap:8px;
+  }
+  button:hover{border-color:var(--periferia-green);}
+  button:active{transform:scale(0.98);}
+  button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible{
+    outline:2px solid var(--periferia-green); outline-offset:2px;
+  }
+  .btn-primary{background:var(--periferia-green);color:#FFFFFF;border-color:var(--periferia-green);font-weight:600;}
+  .btn-primary:hover{border-color:var(--periferia-green-dark);background:var(--periferia-green-dark);}
+  .btn-ghost{background:transparent;}
+  .btn-danger-text{background:transparent;border-color:transparent;color:var(--danger);padding:6px 8px;}
+  .btn-danger-text:hover{border-color:var(--danger);}
+
+  /* Stat chips */
+  .stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:22px;}
+  .chip{
+    background:var(--bg-panel);border:1px solid var(--line);border-radius:10px;
+    padding:12px 16px;min-width:120px;box-shadow:0 2px 10px rgba(21,42,30,0.05);
+  }
+  .chip .num{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;line-height:1;}
+  .chip .label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.07em;margin-top:5px;}
+  .chip.amber .num{color:var(--amber);}
+  .chip.teal .num{color:var(--teal);}
+  .chip.coral .num{color:var(--coral);}
+
+  /* Layout */
+  .layout{display:grid;grid-template-columns:440px 1fr;gap:22px;align-items:start;}
+  @media (max-width:940px){.layout{grid-template-columns:1fr;}}
+
+  .panel{background:var(--bg-panel);border:1px solid var(--line);border-radius:14px;padding:20px;box-shadow:0 2px 14px rgba(21,42,30,0.06);}
+  .panel h2{
+    font-family:'Space Grotesk',sans-serif;font-size:15px;margin:0 0 14px;
+    display:flex;align-items:center;gap:8px;letter-spacing:.01em;
+  }
+  .panel h2 .dot{width:7px;height:7px;border-radius:50%;background:var(--teal);}
+
+  /* Radar */
+  .radar-wrap{position:relative;aspect-ratio:1/1;max-width:400px;margin:0 auto;}
+  .sweep{
+    position:absolute;inset:0;border-radius:50%;
+    background:conic-gradient(from 0deg, rgba(31,107,63,0.30), transparent 22%, transparent 100%);
+    animation:spin 7s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  @media (prefers-reduced-motion:reduce){ .sweep{animation:none;} }
+  svg{position:relative;display:block;width:100%;height:100%;}
+  .ring{fill:none;stroke:var(--line);stroke-width:1;}
+  .sector-line{stroke:var(--line);stroke-width:1;}
+  .ring-label, .sector-label{
+    font-family:'IBM Plex Mono',monospace;font-size:9px;fill:var(--text-muted);
+  }
+  .sector-label{font-size:9.5px;fill:var(--text-muted);letter-spacing:.03em;}
+  .event-dot{cursor:pointer;stroke:var(--bg);stroke-width:1.5;}
+  .event-dot:hover{stroke:var(--text);}
+  .radar-empty{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    text-align:center;color:var(--text-muted);font-size:12.5px;padding:40px;
+  }
+  .radar-legend{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:14px;font-size:11px;color:var(--text-muted);}
+  .radar-legend span{display:inline-flex;align-items:center;gap:5px;}
+  .legend-dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+
+  /* Form */
+  form{display:flex;flex-direction:column;gap:12px;}
+  .field label{
+    display:block;font-size:11.5px;color:var(--text-muted);margin-bottom:5px;
+    text-transform:uppercase;letter-spacing:.05em;
+  }
+  .field input, .field select, .field textarea{
+    width:100%;background:var(--bg-panel-2);border:1px solid var(--line);border-radius:8px;
+    color:var(--text);padding:9px 11px;font-family:'IBM Plex Sans',sans-serif;font-size:13.5px;
+  }
+  #informe-form input, #informe-form select, #informe-form textarea{
+    width:100%;background:var(--bg-panel-2);border:1px solid var(--line);border-radius:8px;
+    color:var(--text);padding:9px 11px;font-family:'IBM Plex Sans',sans-serif;font-size:13.5px;
+  }
+  .field textarea{resize:vertical;min-height:56px;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .form-foot{display:flex;gap:10px;align-items:center;margin-top:4px;}
+  #edit-banner{
+    display:none;background:rgba(232,179,74,0.1);border:1px solid var(--amber);
+    color:var(--amber);border-radius:8px;padding:8px 12px;font-size:12.5px;
+    display:none;align-items:center;justify-content:space-between;gap:10px;
+  }
+  #edit-banner.show{display:flex;}
+
+  /* List panel */
+  .list-panel{grid-column:1/-1;}
+  .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+  .filters select, .filters input{
+    background:var(--bg-panel-2);border:1px solid var(--line);border-radius:8px;
+    color:var(--text);padding:8px 11px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;
+  }
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{
+    text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--text-muted);border-bottom:1px solid var(--line);padding:8px 10px;font-weight:500;
+  }
+  tbody td{padding:10px;border-bottom:1px solid var(--line-soft);vertical-align:middle;}
+  tbody tr:hover{background:rgba(255,255,255,0.02);}
+  tbody tr.flash{animation:flash 1.4s ease;}
+  @keyframes flash{0%{background:rgba(232,179,74,0.25);}100%{background:transparent;}}
+  .ev-name{font-weight:500;}
+  .ev-meta{color:var(--text-muted);font-size:11.5px;margin-top:2px;}
+  .tag{
+    display:inline-block;font-size:10.5px;padding:3px 8px;border-radius:20px;
+    border:1px solid var(--line);color:var(--text-muted);font-family:'IBM Plex Mono',monospace;
+  }
+  select.estado-select{
+    font-family:'IBM Plex Sans',sans-serif;font-size:12px;padding:5px 8px;border-radius:6px;
+    border:1px solid var(--line);background:var(--bg-panel-2);color:var(--text);
+  }
+  .fecha-cell{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);}
+  .urg-tag{
+    display:inline-block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-weight:600;
+    padding:2px 7px;border-radius:20px;margin-top:4px;letter-spacing:.03em;
+  }
+  .urg-vencido{background:rgba(225,97,91,0.16);color:var(--danger);}
+  .urg-proximo{background:rgba(232,179,74,0.16);color:var(--amber);}
+  .urg-tiempo{background:rgba(45,212,191,0.14);color:var(--teal);}
+  .urg-final{background:rgba(140,153,175,0.14);color:var(--text-muted);}
+  .empty-row td{text-align:center;color:var(--text-muted);padding:36px;font-size:13px;}
+  .row-actions{display:flex;gap:4px;}
+  a.ev-link{color:var(--teal);text-decoration:none;font-size:11.5px;}
+  a.ev-link:hover{text-decoration:underline;}
+
+  /* Toast */
+  #toast{
+    position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--bg-panel-2);border:1px solid var(--teal);color:var(--text);
+    padding:11px 18px;border-radius:9px;font-size:13px;opacity:0;pointer-events:none;
+    transition:opacity .25s, transform .25s;z-index:90;
+  }
+  #toast.err{border-color:var(--danger);}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .footnote{color:var(--text-muted);font-size:11.5px;margin-top:10px;text-align:center;}
+  #file-input{display:none;}
+  #script-url-input{
+    flex:1;min-width:260px;background:var(--bg-panel-2);border:1px solid var(--line);
+    border-radius:8px;color:var(--text);padding:9px 11px;
+    font-family:'IBM Plex Mono',monospace;font-size:12.5px;
+  }
+  #connect-panel code{color:var(--amber);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <img src="https://periferiaitgroup.com/wp-content/uploads/2024/02/periferia-it-group.webp" alt="Periferia IT Group" style="height:34px;margin-bottom:14px;display:block;">
+      <p class="brand-eyebrow">Estación de monitoreo · Ecosistema tech</p>
+      <h1>Radar<span>°</span> LATAM</h1>
+      <p class="subtitle">Sigue conferencias, hackathons, meetups y webinars en Latinoamérica, registra tu asistencia y exporta el conocimiento a Excel.</p>
+    </div>
+    <div class="actions">
+      <button class="btn-ghost" id="btn-settings">⚙ Conexión</button>
+      <button class="btn-ghost" id="btn-import">⇪ Importar Excel</button>
+      <input type="file" id="file-input" accept=".xlsx,.xls">
+      <button class="btn-primary" id="btn-export">⇩ Exportar a Excel</button>
+    </div>
+  </header>
+
+  <section class="panel" id="connect-panel" style="margin-bottom:22px;display:none;">
+    <h2><span class="dot" style="background:var(--coral)"></span>Conectar con Google Sheets</h2>
+    <p class="subtitle" style="margin-top:-6px;">
+      Pega aquí la URL de tu Web App de Google Apps Script (termina en <code>/exec</code>).
+      Con esto, el radar guarda cada evento directamente en tu hoja de cálculo, visible para cualquiera con el link.
+    </p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+      <input id="script-url-input" placeholder="https://script.google.com/macros/s/XXXXXXXX/exec">
+      <button class="btn-primary" id="connect-btn" type="button">Conectar</button>
+    </div>
+    <p class="footnote" id="connect-status" style="text-align:left;"></p>
+  </section>
+
+  <div id="app-main" style="display:none;">
+  <div class="stats" id="stats"></div>
+
+  <div class="layout">
+
+    <!-- RADAR -->
+    <section class="panel">
+      <h2><span class="dot"></span>Próximos 120 días</h2>
+      <div class="radar-wrap">
+        <div class="sweep"></div>
+        <svg id="radar-svg" viewBox="0 0 400 400"></svg>
+        <div class="radar-empty" id="radar-empty" style="display:none;">Aún no hay eventos próximos en el radar.<br>Agrega uno con el formulario →</div>
+      </div>
+      <div class="radar-legend" id="radar-legend"></div>
+    </section>
+
+    <!-- FORM -->
+    <section class="panel">
+      <h2><span class="dot" style="background:var(--periferia-green)"></span>Agregar al radar</h2>
+      <div id="edit-banner">
+        <span>Editando evento existente</span>
+        <button type="button" id="cancel-edit" style="padding:4px 10px;font-size:11.5px;">Cancelar</button>
+      </div>
+      <form id="event-form">
+        <div class="field">
+          <label for="f-nombre">Nombre del evento</label>
+          <input id="f-nombre" required placeholder="Ej. NASA Space Apps Bogotá">
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="f-tipo">Tipo</label>
+            <select id="f-tipo">
+              <option>Conferencia</option>
+              <option>Hackathon</option>
+              <option>Meetup</option>
+              <option>Webinar</option>
+              <option>Otro</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="f-modalidad">Modalidad</label>
+            <select id="f-modalidad">
+              <option>Presencial</option>
+              <option>Virtual</option>
+              <option>Híbrido</option>
+            </select>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="f-pais">País</label>
+            <select id="f-pais">
+              <option>Argentina</option><option>Bolivia</option><option>Brasil</option>
+              <option>Chile</option><option selected>Colombia</option><option>Costa Rica</option>
+              <option>Cuba</option><option>Ecuador</option><option>El Salvador</option>
+              <option>Guatemala</option><option>Honduras</option><option>México</option>
+              <option>Nicaragua</option><option>Panamá</option><option>Paraguay</option>
+              <option>Perú</option><option>Puerto Rico</option><option>República Dominicana</option>
+              <option>Uruguay</option><option>Venezuela</option><option>Internacional</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="f-ciudad">Ciudad</label>
+            <input id="f-ciudad" placeholder="Ej. Medellín">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="f-fecha">Fecha</label>
+            <input id="f-fecha" type="date" required>
+          </div>
+          <div class="field">
+            <label for="f-responsable">Responsable</label>
+            <input id="f-responsable" required placeholder="Nombre de quien asiste">
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-estado">Estado</label>
+          <select id="f-estado">
+            <option>Por confirmar</option>
+            <option>Confirmado</option>
+            <option>Asistí</option>
+            <option>No asistí</option>
+            <option>Cancelado</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-descripcion">Descripción previa del evento</label>
+          <textarea id="f-descripcion" placeholder="Qué se espera del evento, agenda, objetivo de asistir..." style="min-height:64px;"></textarea>
+        </div>
+        <div class="field">
+          <label for="f-link">Enlace (opcional)</label>
+          <input id="f-link" type="url" placeholder="https://...">
+        </div>
+        <div class="field">
+          <label for="f-notas">Notas (opcional)</label>
+          <textarea id="f-notas" placeholder="Speakers, temas, contactos, aprendizajes..."></textarea>
+        </div>
+        <div class="form-foot">
+          <button type="submit" class="btn-primary" id="submit-btn">+ Agregar evento</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- LIST -->
+    <section class="panel list-panel">
+      <h2><span class="dot" style="background:var(--coral)"></span>Bitácora de eventos</h2>
+      <div class="filters">
+        <select id="filter-estado">
+          <option value="">Todos los estados</option>
+          <option>Por confirmar</option><option>Confirmado</option>
+          <option>Asistí</option><option>No asistí</option><option>Cancelado</option>
+        </select>
+        <select id="filter-tipo">
+          <option value="">Todos los tipos</option>
+          <option>Conferencia</option><option>Hackathon</option><option>Meetup</option>
+          <option>Webinar</option><option>Otro</option>
+        </select>
+        <select id="filter-urgencia">
+          <option value="">Cualquier urgencia</option>
+          <option value="Vencido">Vencido</option>
+          <option value="Próximo a vencer">Próximo a vencer</option>
+          <option value="Con tiempo">Con tiempo</option>
+        </select>
+        <input id="filter-texto" placeholder="Buscar por nombre, país o ciudad...">
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Evento</th><th>Tipo</th><th>Lugar</th><th>Fecha</th><th>Responsable</th><th>Estado</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+      <p class="footnote">Los datos se guardan en tu hoja de Google Sheets conectada. Usa "Exportar a Excel" cuando quieras un respaldo descargable.</p>
+    </section>
+
+  </div>
+  </div><!-- /app-main -->
+</div>
+
+<!-- MODAL: Registro de Transferencia de Conocimiento (LAB-AIN09) -->
+<div id="informe-overlay" style="display:none;position:fixed;inset:0;background:rgba(6,10,18,0.72);z-index:80;align-items:flex-start;justify-content:center;overflow-y:auto;padding:32px 16px;">
+  <div class="panel" style="max-width:720px;width:100%;margin-bottom:40px;">
+    <h2><span class="dot" style="background:var(--periferia-green)"></span>Registro de Evento y Transferencia de Conocimiento</h2>
+    <p class="subtitle" style="margin-top:-8px;">Obligatorio al marcar un evento como "Asistí" (LAB – AIN09). Quedará guardado en la hoja "Informes".</p>
+
+    <div id="inf-evento-context" class="panel" style="background:var(--bg-panel-2);padding:12px 14px;margin-top:10px;font-size:12.5px;color:var(--text-muted);"></div>
+
+    <form id="informe-form" style="display:flex;flex-direction:column;gap:12px;margin-top:14px;">
+      <div class="row2">
+        <div class="field">
+          <label for="inf-responsable">Responsable que diligencia</label>
+          <input id="inf-responsable" required placeholder="Nombre completo">
+        </div>
+        <div class="field">
+          <label for="inf-area">Área relacionada</label>
+          <select id="inf-area">
+            <option>XR</option><option>Blockchain</option><option>IA</option>
+            <option>Big Data</option><option>QA</option><option>GIS</option>
+            <option>Desarrollo</option><option>Otro</option>
+          </select>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="inf-duracion">Duración del evento</label>
+          <input id="inf-duracion" placeholder="Ej. 4 horas, 2 días">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="inf-enlace">Enlace oficial</label>
+          <input id="inf-enlace" type="url" placeholder="https://...">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="inf-resumen">Resumen ejecutivo (máx. 10 líneas)</label>
+        <textarea id="inf-resumen" required placeholder="Qué fue el evento y por qué fue relevante" style="min-height:90px;"></textarea>
+      </div>
+
+      <div class="field">
+        <label>Charlas o sesiones destacadas</label>
+        <div id="inf-sesiones" style="display:flex;flex-direction:column;gap:8px;"></div>
+        <button type="button" class="btn-ghost" id="inf-add-sesion" style="align-self:flex-start;margin-top:4px;font-size:12px;padding:6px 10px;">+ Agregar sesión</button>
+      </div>
+
+      <div class="field">
+        <label>Tendencias identificadas</label>
+        <div id="inf-tendencias" style="display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px;color:var(--text-muted);"></div>
+      </div>
+
+      <div class="field">
+        <label>Oportunidades para Periferia (hasta 3 ideas)</label>
+        <div id="inf-oportunidades" style="display:flex;flex-direction:column;gap:10px;"></div>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label for="inf-socializar">¿Recomiendas socializar con el equipo?</label>
+          <select id="inf-socializar">
+            <option>Sí</option>
+            <option>No</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="inf-duracion-social">Duración sugerida (si aplica)</label>
+          <select id="inf-duracion-social">
+            <option>15 min</option>
+            <option>30 min</option>
+            <option>1 hora</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label for="inf-evidencia-link">Evidencia fotográfica (enlace a Drive/carpeta)</label>
+          <input id="inf-evidencia-link" type="url" placeholder="https://drive.google.com/...">
+        </div>
+        <div class="field">
+          <label for="inf-evidencia-desc">Descripción de la evidencia</label>
+          <input id="inf-evidencia-desc" placeholder="Ej. Fotos del stand y networking">
+        </div>
+      </div>
+
+      <div class="form-foot" style="justify-content:flex-end;">
+        <button type="button" class="btn-ghost" id="informe-cancel">Cancelar</button>
+        <button type="submit" class="btn-primary" id="informe-submit">✓ Guardar informe y marcar Asistí</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+  const CATEGORIES = ['Conferencia','Hackathon','Meetup','Webinar','Otro'];
+  const CAT_COLORS = {
+    'Conferencia':'#E8B34A','Hackathon':'#FF6F59','Meetup':'#2DD4BF',
+    'Webinar':'#8C99AF','Otro':'#C9A6FF'
+  };
+  const ESTADO_COLORS = {
+    'Por confirmar':'#8C99AF','Confirmado':'#3E9C6F','Asistí':'#1F6B3F',
+    'No asistí':'#D14B43','Cancelado':'#8A9690'
+  };
+  const TENDENCIAS = ['Inteligencia Artificial','Agentes IA','Realidad Mixta','Metaverso','Blockchain',
+    'Big Data','GIS','Gemelos Digitales','Automatización','IoT','Computación Espacial','Ciberseguridad','Otro'];
+  const COMPLEJIDADES = ['Baja','Media','Alta'];
+
+  let informePending = null; // { mode:'inline'|'form', event, prevEstado, formData }
+  let sesionCount = 0;
+
+  let events = [];
+  let editingId = null;
+  let loaded = false;
+
+  const $ = (sel)=>document.querySelector(sel);
+  const tableBody = $('#table-body');
+
+  function toast(msg, isErr){
+    const t = $('#toast');
+    t.textContent = msg;
+    t.classList.toggle('err', !!isErr);
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(()=>t.classList.remove('show'), 2600);
+  }
+
+  function genId(){ return 'ev_'+Date.now()+'_'+Math.random().toString(36).slice(2,7); }
+  function hashStr(s){ let h=0; for(let i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))|0; } return Math.abs(h); }
+  function todayStr(){ return new Date().toISOString().slice(0,10); }
+  function daysBetween(dateStr){
+    const d = new Date(dateStr+'T00:00:00');
+    const t = new Date(todayStr()+'T00:00:00');
+    return Math.round((d-t)/86400000);
+  }
+
+  const PROXIMO_UMBRAL_DIAS = 7; // umbral para "próximo a vencer"
+
+  function urgencyInfo(ev){
+    const finales = ['Asistí','No asistí','Cancelado'];
+    if(finales.includes(ev.estado)){
+      return { text: ev.estado === 'Asistí' ? 'Finalizado' : ev.estado, cls: 'urg-final' };
+    }
+    const d = daysBetween(ev.fecha);
+    if(d < 0) return { text: 'Vencido', cls: 'urg-vencido' };
+    if(d <= PROXIMO_UMBRAL_DIAS) return { text: 'Próximo a vencer', cls: 'urg-proximo' };
+    return { text: 'Con tiempo', cls: 'urg-tiempo' };
+  }
+
+  const LS_URL_KEY = 'radar_latam_script_url';
+  const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx21BicnNI51jh07wy1Yt2Tn54FiJb_sLSBgVRRszIehAy4r90FstTgJ9eiOtjdI-lUUA/exec';
+  let scriptUrl = localStorage.getItem(LS_URL_KEY) || DEFAULT_SCRIPT_URL;
+
+  function showConnectPanel(msg, isErr){
+    $('#connect-panel').style.display = 'block';
+    $('#app-main').style.display = 'none';
+    const s = $('#connect-status');
+    s.textContent = msg || '';
+    s.style.color = isErr ? 'var(--danger)' : 'var(--teal)';
+    if(scriptUrl) $('#script-url-input').value = scriptUrl;
+  }
+  function hideConnectPanel(){
+    $('#connect-panel').style.display = 'none';
+    $('#app-main').style.display = '';
+  }
+
+  async function apiLoad(url){
+    const res = await fetch(url, {method:'GET'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    if(!Array.isArray(data)) throw new Error('Respuesta inesperada');
+    return data.map(ev => ({
+      id: ev.id || genId(),
+      nombre: ev.nombre || '',
+      tipo: ev.tipo || 'Otro',
+      modalidad: ev.modalidad || 'Virtual',
+      pais: ev.pais || '',
+      ciudad: ev.ciudad || '',
+      fecha: ev.fecha ? String(ev.fecha).slice(0,10) : todayStr(),
+      estado: ev.estado || 'Por confirmar',
+      responsable: ev.responsable || '',
+      descripcion: ev.descripcion || '',
+      link: ev.link || '',
+      notas: ev.notas || ''
+    }));
+  }
+
+  async function apiPost(url, payload){
+    const res = await fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'}, // evita preflight CORS con Apps Script
+      body: JSON.stringify(payload)
+    });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    return res.json();
+  }
+  const apiAdd = (url, event) => apiPost(url, {action:'add', event});
+  const apiUpdate = (url, event) => apiPost(url, {action:'update', event});
+  const apiDelete = (url, id) => apiPost(url, {action:'delete', id});
+  const apiAddInforme = (url, informe) => apiPost(url, {action:'addInforme', informe});
+
+  async function loadEvents(){
+    if(!scriptUrl){ showConnectPanel(''); loaded = true; return; }
+    try{
+      events = await apiLoad(scriptUrl);
+      hideConnectPanel();
+      loaded = true;
+      renderAll();
+    }catch(e){
+      loaded = true;
+      showConnectPanel('No se pudo conectar con esa hoja. Revisa la URL y que el acceso esté en "Cualquier usuario".', true);
+    }
+  }
+
+  $('#btn-settings').addEventListener('click', ()=> showConnectPanel(scriptUrl ? 'Conectado. Puedes cambiar la URL si quieres usar otra hoja.' : ''));
+
+  $('#connect-btn').addEventListener('click', async ()=>{
+    const url = $('#script-url-input').value.trim();
+    if(!url.startsWith('https://script.google.com/')){
+      showConnectPanel('Esa no parece una URL válida de Apps Script.', true);
+      return;
+    }
+    showConnectPanel('Conectando...');
+    try{
+      events = await apiLoad(url);
+      scriptUrl = url;
+      localStorage.setItem(LS_URL_KEY, url);
+      hideConnectPanel();
+      renderAll();
+      toast('Conectado a Google Sheets');
+    }catch(e){
+      showConnectPanel('No se pudo conectar. Verifica que la implementación esté publicada como "Cualquier usuario".', true);
+    }
+  });
+
+  // ---------- STATS ----------
+  function renderStats(){
+    const total = events.length;
+    const proximos = events.filter(e=>daysBetween(e.fecha) >= 0 && e.estado!=='Cancelado').length;
+    const asistidos = events.filter(e=>e.estado==='Asistí').length;
+    const noAsist = events.filter(e=>e.estado==='No asistí').length;
+    const tasa = (asistidos+noAsist)>0 ? Math.round((asistidos/(asistidos+noAsist))*100)+'%' : '—';
+    const porVencer = events.filter(e=> urgencyInfo(e).text === 'Próximo a vencer').length;
+    $('#stats').innerHTML = `
+      <div class="chip"><div class="num">${total}</div><div class="label">Total registrados</div></div>
+      <div class="chip teal"><div class="num">${proximos}</div><div class="label">Próximos</div></div>
+      <div class="chip" style="border-color:var(--amber);"><div class="num" style="color:var(--amber);">${porVencer}</div><div class="label">Próximos a vencer</div></div>
+      <div class="chip amber"><div class="num">${asistidos}</div><div class="label">Asistidos</div></div>
+      <div class="chip coral"><div class="num">${tasa}</div><div class="label">Tasa de asistencia</div></div>
+    `;
+  }
+
+  // ---------- RADAR ----------
+  function renderRadar(){
+    const svg = $('#radar-svg');
+    const cx=200, cy=200, maxR=170;
+    const rings = [30,60,90,120];
+    let markup = '';
+
+    rings.forEach(d=>{
+      const r = 25 + (d/120)*145;
+      markup += `<circle class="ring" cx="${cx}" cy="${cy}" r="${r}"/>`;
+      markup += `<text class="ring-label" x="${cx+4}" y="${cy-r+3}">${d}d</text>`;
+    });
+
+    CATEGORIES.forEach((cat,i)=>{
+      const angle = (-90 + i*72) * Math.PI/180;
+      const x2 = cx + Math.cos(angle)*maxR;
+      const y2 = cy + Math.sin(angle)*maxR;
+      markup += `<line class="sector-line" x1="${cx}" y1="${cy}" x2="${x2}" y2="${y2}"/>`;
+      const labelAngle = (-90 + i*72 + 36) * Math.PI/180;
+      const lx = cx + Math.cos(labelAngle)*(maxR+14);
+      const ly = cy + Math.sin(labelAngle)*(maxR+14);
+      markup += `<text class="sector-label" x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle">${cat}</text>`;
+    });
+
+    const upcoming = events.filter(e => daysBetween(e.fecha) >= 0 && daysBetween(e.fecha) <= 400 && e.estado !== 'Cancelado');
+
+    upcoming.forEach(ev=>{
+      const catIndex = Math.max(0, CATEGORIES.indexOf(ev.tipo));
+      const h = hashStr(ev.id);
+      const jitterAngle = (h % 40) - 20;
+      const baseAngle = -90 + catIndex*72 + 36 + jitterAngle;
+      const rad = baseAngle * Math.PI/180;
+      const days = Math.max(0, Math.min(120, daysBetween(ev.fecha)));
+      const jitterR = (h % 16) - 8;
+      const r = Math.max(14, Math.min(170, 25 + (days/120)*145 + jitterR));
+      const x = cx + Math.cos(rad)*r;
+      const y = cy + Math.sin(rad)*r;
+      const color = ESTADO_COLORS[ev.estado] || CAT_COLORS[ev.tipo];
+      markup += `<circle class="event-dot" data-id="${ev.id}" cx="${x}" cy="${y}" r="6" fill="${color}"><title>${escapeHtml(ev.nombre)} — ${ev.fecha}</title></circle>`;
+    });
+
+    svg.innerHTML = markup;
+    $('#radar-empty').style.display = upcoming.length ? 'none' : 'flex';
+
+    svg.querySelectorAll('.event-dot').forEach(dot=>{
+      dot.addEventListener('click', ()=>{
+        const id = dot.getAttribute('data-id');
+        const row = document.querySelector(`tr[data-id="${id}"]`);
+        if(row){
+          row.scrollIntoView({behavior:'smooth', block:'center'});
+          row.classList.remove('flash'); void row.offsetWidth; row.classList.add('flash');
+        }
+      });
+    });
+
+    $('#radar-legend').innerHTML = Object.entries(ESTADO_COLORS).map(([k,c])=>
+      `<span><span class="legend-dot" style="background:${c}"></span>${k}</span>`
+    ).join('');
+  }
+
+  // ---------- LIST ----------
+  function escapeHtml(s){
+    return String(s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  function renderTable(){
+    const fEstado = $('#filter-estado').value;
+    const fTipo = $('#filter-tipo').value;
+    const fUrgencia = $('#filter-urgencia').value;
+    const fTexto = $('#filter-texto').value.trim().toLowerCase();
+
+    let list = events.filter(e=>{
+      if(fEstado && e.estado !== fEstado) return false;
+      if(fTipo && e.tipo !== fTipo) return false;
+      if(fUrgencia && urgencyInfo(e).text !== fUrgencia) return false;
+      if(fTexto){
+        const hay = `${e.nombre} ${e.pais} ${e.ciudad}`.toLowerCase();
+        if(!hay.includes(fTexto)) return false;
+      }
+      return true;
+    });
+
+    list.sort((a,b)=> a.fecha.localeCompare(b.fecha));
+
+    if(list.length === 0){
+      tableBody.innerHTML = `<tr class="empty-row"><td colspan="7">No hay eventos que coincidan. Ajusta los filtros o agrega uno nuevo.</td></tr>`;
+      return;
+    }
+
+    tableBody.innerHTML = list.map(ev=>{
+      const d = daysBetween(ev.fecha);
+      const when = d===0 ? 'Hoy' : d>0 ? `en ${d}d` : `hace ${Math.abs(d)}d`;
+      return `
+      <tr data-id="${ev.id}">
+        <td>
+          <div class="ev-name" ${ev.descripcion ? `title="${escapeHtml(ev.descripcion)}"` : ''}>${escapeHtml(ev.nombre)}</div>
+          <div class="ev-meta">${ev.modalidad}${ev.link ? ' · <a class="ev-link" href="'+escapeHtml(ev.link)+'" target="_blank" rel="noopener">enlace</a>' : ''}</div>
+        </td>
+        <td><span class="tag">${ev.tipo}</span></td>
+        <td>${escapeHtml(ev.ciudad ? ev.ciudad+', '+ev.pais : ev.pais)}</td>
+        <td class="fecha-cell">${ev.fecha}<br>${when}<br><span class="urg-tag ${urgencyInfo(ev).cls}">${urgencyInfo(ev).text}</span></td>
+        <td>${escapeHtml(ev.responsable || '—')}</td>
+        <td>
+          <select class="estado-select" data-id="${ev.id}">
+            ${Object.keys(ESTADO_COLORS).map(s=>`<option value="${s}" ${s===ev.estado?'selected':''}>${s}</option>`).join('')}
+          </select>
+        </td>
+        <td class="row-actions">
+          <button class="btn-ghost" style="padding:6px 10px;font-size:11.5px;" data-edit="${ev.id}">Editar</button>
+          <button class="btn-danger-text" data-del="${ev.id}">Eliminar</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    tableBody.querySelectorAll('.estado-select').forEach(sel=>{
+      sel.addEventListener('change', async ()=>{
+        const ev = events.find(e=>e.id===sel.getAttribute('data-id'));
+        if(!ev) return;
+        const prevEstado = ev.estado;
+
+        if(sel.value === 'Asistí'){
+          openInformeModal('inline', ev, prevEstado);
+          return; // el guardado real ocurre al enviar el modal; si cancela, se revierte el select
+        }
+
+        ev.estado = sel.value;
+        renderAll();
+        try{ await apiUpdate(scriptUrl, ev); toast('Estado actualizado'); }
+        catch(err){ ev.estado = prevEstado; renderAll(); toast('No se pudo guardar el cambio', true); }
+      });
+    });
+    tableBody.querySelectorAll('[data-edit]').forEach(btn=>{
+      btn.addEventListener('click', ()=> startEdit(btn.getAttribute('data-edit')));
+    });
+    tableBody.querySelectorAll('[data-del]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const id = btn.getAttribute('data-del');
+        if(confirm('¿Eliminar este evento del radar?')){
+          const backup = events;
+          events = events.filter(e=>e.id!==id);
+          if(editingId===id) resetForm();
+          renderAll();
+          try{ await apiDelete(scriptUrl, id); toast('Evento eliminado'); }
+          catch(err){ events = backup; renderAll(); toast('No se pudo eliminar en la hoja', true); }
+        }
+      });
+    });
+  }
+
+  function renderAll(){
+    renderStats();
+    renderRadar();
+    renderTable();
+  }
+
+  // ---------- INFORME DE TRANSFERENCIA DE CONOCIMIENTO (LAB-AIN09) ----------
+  function addSesionRow(){
+    sesionCount++;
+    const id = 'ses-'+sesionCount;
+    const row = document.createElement('div');
+    row.className = 'row2';
+    row.dataset.sesionRow = id;
+    row.style.gridTemplateColumns = '1fr 1fr 1fr auto';
+    row.innerHTML = `
+      <input placeholder="Sesión" data-f="sesion">
+      <input placeholder="Ponente" data-f="ponente">
+      <input placeholder="Tema principal" data-f="tema">
+      <button type="button" class="btn-danger-text" data-remove-sesion>✕</button>
+    `;
+    row.querySelector('[data-remove-sesion]').addEventListener('click', ()=> row.remove());
+    $('#inf-sesiones').appendChild(row);
+  }
+
+  function renderTendenciasCheckboxes(){
+    $('#inf-tendencias').innerHTML = TENDENCIAS.map(t=>`
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+        <input type="checkbox" value="${t}" data-tendencia> ${t}
+      </label>
+    `).join('');
+  }
+
+  function renderOportunidades(){
+    $('#inf-oportunidades').innerHTML = [1,2,3].map(n=>`
+      <div class="panel" style="padding:12px;background:var(--bg-panel-2);" data-idea="${n}">
+        <p style="margin:0 0 8px;font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;">Idea ${n}</p>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <input placeholder="Descripción" data-f="descripcion">
+          <input placeholder="Beneficio" data-f="beneficio">
+          <select data-f="complejidad">
+            <option value="">Complejidad (opcional)</option>
+            ${COMPLEJIDADES.map(c=>`<option value="${c}">${c}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function resetInformeForm(ev){
+    $('#informe-form').reset();
+    $('#inf-sesiones').innerHTML = '';
+    sesionCount = 0;
+    addSesionRow();
+    renderTendenciasCheckboxes();
+    renderOportunidades();
+    $('#inf-responsable').value = (ev && ev.responsable) ? ev.responsable : '';
+    $('#inf-enlace').value = (ev && ev.link) ? ev.link : '';
+
+    if(ev){
+      const lugar = ev.ciudad ? `${ev.ciudad}, ${ev.pais}` : ev.pais;
+      $('#inf-evento-context').innerHTML = `
+        <strong style="color:var(--text);">${escapeHtml(ev.nombre)}</strong><br>
+        ${escapeHtml(ev.tipo)} · ${escapeHtml(ev.modalidad)} · ${escapeHtml(lugar)} · ${ev.fecha}
+        ${ev.descripcion ? `<br><br><em>Descripción previa:</em> ${escapeHtml(ev.descripcion)}` : ''}
+      `;
+    }
+  }
+
+  function openInformeModal(mode, event, prevEstado){
+    informePending = { mode, event, prevEstado };
+    resetInformeForm(event);
+    $('#informe-overlay').style.display = 'flex';
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  function closeInformeModal(){
+    $('#informe-overlay').style.display = 'none';
+    informePending = null;
+  }
+
+  $('#informe-cancel').addEventListener('click', ()=>{
+    if(!informePending) return closeInformeModal();
+    if(informePending.mode === 'inline'){
+      const sel = document.querySelector(`.estado-select[data-id="${informePending.event.id}"]`);
+      if(sel) sel.value = informePending.prevEstado;
+      toast('Cambio de estado cancelado');
+    } else if(informePending.mode === 'form'){
+      $('#f-estado').value = informePending.prevEstado;
+      toast('Debes completar el informe para marcar Asistí');
+    }
+    closeInformeModal();
+  });
+
+  $('#inf-add-sesion').addEventListener('click', addSesionRow);
+
+  $('#informe-form').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    if(!informePending){ return; }
+    if(!scriptUrl){ toast('No hay conexión con Google Sheets configurada', true); return; }
+
+    const ev = informePending.event;
+    const sesiones = [...document.querySelectorAll('[data-sesion-row]')].map(row=>({
+      sesion: row.querySelector('[data-f="sesion"]').value.trim(),
+      ponente: row.querySelector('[data-f="ponente"]').value.trim(),
+      tema: row.querySelector('[data-f="tema"]').value.trim()
+    })).filter(s=> s.sesion || s.ponente || s.tema);
+
+    const tendencias = [...document.querySelectorAll('[data-tendencia]:checked')].map(cb=>cb.value);
+
+    const oportunidades = [...document.querySelectorAll('[data-idea]')].map(box=>({
+      descripcion: box.querySelector('[data-f="descripcion"]').value.trim(),
+      beneficio: box.querySelector('[data-f="beneficio"]').value.trim(),
+      complejidad: box.querySelector('[data-f="complejidad"]').value
+    })).filter(o=> o.descripcion || o.beneficio || o.complejidad);
+
+    const responsable = $('#inf-responsable').value.trim();
+    if(!responsable){ toast('Indica el responsable que diligencia el informe', true); return; }
+
+    const informe = {
+      id: genId(),
+      eventoId: ev.id,
+      eventoNombre: ev.nombre,
+      responsable,
+      tipoEvento: ev.tipo,
+      fecha: ev.fecha,
+      ciudadPais: ev.ciudad ? `${ev.ciudad}, ${ev.pais}` : ev.pais,
+      modalidad: ev.modalidad,
+      areaRelacionada: $('#inf-area').value,
+      duracion: $('#inf-duracion').value.trim(),
+      enlaceOficial: $('#inf-enlace').value.trim(),
+      resumenEjecutivo: $('#inf-resumen').value.trim(),
+      sesiones,
+      tendencias,
+      oportunidades,
+      socializarEquipo: $('#inf-socializar').value,
+      duracionSocializacion: $('#inf-duracion-social').value,
+      evidenciaLink: $('#inf-evidencia-link').value.trim(),
+      evidenciaDescripcion: $('#inf-evidencia-desc').value.trim()
+    };
+
+    const submitBtn = $('#informe-submit');
+    submitBtn.disabled = true;
+    try{
+      await apiAddInforme(scriptUrl, informe);
+
+      ev.estado = 'Asistí';
+      ev.responsable = responsable;
+
+      if(informePending.mode === 'inline'){
+        await apiUpdate(scriptUrl, ev);
+      } else if(informePending.mode === 'form'){
+        await finalizeEventSubmit(ev, informePending.isNew);
+        resetForm();
+      }
+
+      toast('Informe guardado y evento marcado como Asistí');
+      closeInformeModal();
+      renderAll();
+    }catch(err){
+      toast('No se pudo guardar el informe. Intenta de nuevo.', true);
+      submitBtn.disabled = false;
+      return;
+    }
+    submitBtn.disabled = false;
+  });
+
+  // ---------- FORM ----------
+  function startEdit(id){
+    const ev = events.find(e=>e.id===id);
+    if(!ev) return;
+    editingId = id;
+    $('#f-nombre').value = ev.nombre;
+    $('#f-tipo').value = ev.tipo;
+    $('#f-modalidad').value = ev.modalidad;
+    $('#f-pais').value = ev.pais;
+    $('#f-ciudad').value = ev.ciudad;
+    $('#f-fecha').value = ev.fecha;
+    $('#f-responsable').value = ev.responsable || '';
+    $('#f-estado').value = ev.estado;
+    $('#f-descripcion').value = ev.descripcion || '';
+    $('#f-link').value = ev.link || '';
+    $('#f-notas').value = ev.notas || '';
+    $('#edit-banner').classList.add('show');
+    $('#submit-btn').textContent = '✓ Guardar cambios';
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  function resetForm(){
+    editingId = null;
+    $('#event-form').reset();
+    $('#f-pais').value = 'Colombia';
+    $('#edit-banner').classList.remove('show');
+    $('#submit-btn').textContent = '+ Agregar evento';
+  }
+
+  $('#cancel-edit').addEventListener('click', resetForm);
+
+  async function finalizeEventSubmit(ev, isNew){
+    if(isNew){
+      await apiAdd(scriptUrl, ev);
+      events.push(ev);
+    }else{
+      const idx = events.findIndex(x=>x.id===ev.id);
+      await apiUpdate(scriptUrl, ev);
+      if(idx>-1) events[idx] = ev; else events.push(ev);
+    }
+  }
+
+  $('#event-form').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const data = {
+      nombre: $('#f-nombre').value.trim(),
+      tipo: $('#f-tipo').value,
+      modalidad: $('#f-modalidad').value,
+      pais: $('#f-pais').value,
+      ciudad: $('#f-ciudad').value.trim(),
+      fecha: $('#f-fecha').value,
+      responsable: $('#f-responsable').value.trim(),
+      estado: $('#f-estado').value,
+      descripcion: $('#f-descripcion').value.trim(),
+      link: $('#f-link').value.trim(),
+      notas: $('#f-notas').value.trim()
+    };
+    if(!data.nombre || !data.fecha){ toast('Completa nombre y fecha', true); return; }
+    if(!data.responsable){ toast('Indica quién es el responsable del evento', true); return; }
+    if(!scriptUrl){ toast('No hay conexión con Google Sheets configurada', true); return; }
+
+    const isNew = !editingId;
+    const prevEstado = isNew ? 'Por confirmar' : (events.find(x=>x.id===editingId)?.estado || 'Por confirmar');
+    const ev = isNew ? {id: genId(), ...data} : {...events.find(x=>x.id===editingId), ...data};
+
+    if(data.estado === 'Asistí'){
+      openInformeModal('form', ev, prevEstado);
+      informePending.isNew = isNew;
+      return; // el guardado ocurre al completar el informe; si cancela, se revierte el select del formulario
+    }
+
+    const btn = $('#submit-btn');
+    btn.disabled = true;
+    try{
+      await finalizeEventSubmit(ev, isNew);
+      toast(isNew ? 'Evento agregado al radar' : 'Evento actualizado');
+      resetForm();
+      renderAll();
+    }catch(err){
+      toast('No se pudo guardar en la hoja. Revisa tu conexión.', true);
+    }finally{
+      btn.disabled = false;
+    }
+  });
+
+  ['filter-estado','filter-tipo','filter-urgencia','filter-texto'].forEach(id=>{
+    $('#'+id).addEventListener('input', renderTable);
+    $('#'+id).addEventListener('change', renderTable);
+  });
+
+  // ---------- EXCEL ----------
+  $('#btn-export').addEventListener('click', ()=>{
+    if(typeof XLSX === 'undefined'){ toast('La librería de Excel no cargó. Revisa tu conexión.', true); return; }
+    if(events.length === 0){ toast('Agrega al menos un evento antes de exportar', true); return; }
+
+    const wsData = events.map(ev=>({
+      Nombre: ev.nombre, Tipo: ev.tipo, Modalidad: ev.modalidad, Pais: ev.pais,
+      Ciudad: ev.ciudad, Fecha: ev.fecha, Estado: ev.estado, Responsable: ev.responsable,
+      Descripcion: ev.descripcion, Link: ev.link, Notas: ev.notas
+    }));
+    const ws = XLSX.utils.json_to_sheet(wsData);
+    ws['!cols'] = [{wch:28},{wch:14},{wch:12},{wch:14},{wch:16},{wch:12},{wch:14},{wch:18},{wch:30},{wch:26},{wch:30}];
+
+    const asistidos = events.filter(e=>e.estado==='Asistí').length;
+    const noAsist = events.filter(e=>e.estado==='No asistí').length;
+    const tasa = (asistidos+noAsist)>0 ? ((asistidos/(asistidos+noAsist))*100).toFixed(1)+'%' : 'N/A';
+    const porTipo = {}; events.forEach(e=>porTipo[e.tipo]=(porTipo[e.tipo]||0)+1);
+    const porPais = {}; events.forEach(e=>porPais[e.pais]=(porPais[e.pais]||0)+1);
+    const porEstado = {}; events.forEach(e=>porEstado[e.estado]=(porEstado[e.estado]||0)+1);
+
+    const informeRows = [
+      {Metrica:'Total de eventos registrados', Valor: events.length},
+      {Metrica:'Tasa de asistencia', Valor: tasa},
+      {Metrica:'', Valor:''},
+      {Metrica:'— Por estado —', Valor:''},
+      ...Object.entries(porEstado).map(([k,v])=>({Metrica:k, Valor:v})),
+      {Metrica:'', Valor:''},
+      {Metrica:'— Por tipo —', Valor:''},
+      ...Object.entries(porTipo).map(([k,v])=>({Metrica:k, Valor:v})),
+      {Metrica:'', Valor:''},
+      {Metrica:'— Por país —', Valor:''},
+      ...Object.entries(porPais).map(([k,v])=>({Metrica:k, Valor:v})),
+    ];
+    const wsInforme = XLSX.utils.json_to_sheet(informeRows, {skipHeader:false});
+    wsInforme['!cols'] = [{wch:26},{wch:14}];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Eventos');
+    XLSX.utils.book_append_sheet(wb, wsInforme, 'Informe');
+    XLSX.writeFile(wb, `radar-eventos-latam-${todayStr()}.xlsx`);
+    toast('Excel exportado');
+  });
+
+  $('#btn-import').addEventListener('click', ()=> $('#file-input').click());
+  $('#file-input').addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    if(typeof XLSX === 'undefined'){ toast('La librería de Excel no cargó.', true); return; }
+    const reader = new FileReader();
+    reader.onload = async (ev)=>{
+      try{
+        const data = new Uint8Array(ev.target.result);
+        const wb = XLSX.read(data, {type:'array'});
+        const sheetName = wb.SheetNames.find(n=>/evento/i.test(n)) || wb.SheetNames[0];
+        if(!scriptUrl){ toast('No hay conexión con Google Sheets configurada', true); return; }
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {raw:false});
+        const toImport = rows.map(r=>{
+          const nombre = r.Nombre || r.nombre;
+          if(!nombre) return null;
+          return {
+            id: genId(),
+            nombre: String(nombre),
+            tipo: r.Tipo || r.tipo || 'Otro',
+            modalidad: r.Modalidad || r.modalidad || 'Virtual',
+            pais: r.Pais || r['País'] || r.pais || '',
+            ciudad: r.Ciudad || r.ciudad || '',
+            fecha: r.Fecha || r.fecha || todayStr(),
+            estado: r.Estado || r.estado || 'Por confirmar',
+            responsable: r.Responsable || r.responsable || '',
+            descripcion: r.Descripcion || r.descripcion || '',
+            link: r.Link || r.link || '',
+            notas: r.Notas || r.notas || ''
+          };
+        }).filter(Boolean);
+
+        if(toImport.length === 0){ toast('No se encontraron filas válidas (falta columna Nombre)', true); return; }
+
+        let count = 0;
+        for(const ev of toImport){
+          try{ await apiAdd(scriptUrl, ev); events.push(ev); count++; }
+          catch(err){ /* se continúa con las siguientes filas */ }
+        }
+        renderAll();
+        toast(`${count} de ${toImport.length} evento(s) importado(s)`);
+      }catch(err){
+        toast('No se pudo leer el archivo de Excel', true);
+      }
+      $('#file-input').value = '';
+    };
+    reader.readAsArrayBuffer(file);
+  });
+
+  // init
+  $('#f-fecha').min = '';
+  loadEvents();
+
+  // Refresco periódico: como el registro vive en la hoja compartida, esto trae los
+  // eventos que otras personas hayan agregado desde que abriste la página.
+  setInterval(async ()=>{
+    if(!scriptUrl) return;
+    if(document.hidden) return;
+    if(editingId) return; // no interrumpir si alguien está editando un formulario
+    try{
+      const fresh = await apiLoad(scriptUrl);
+      if(JSON.stringify(fresh) !== JSON.stringify(events)){
+        events = fresh;
+        renderAll();
+      }
+    }catch(e){ /* silencioso: se reintenta en el próximo ciclo */ }
+  }, 15000);
+})();
+</script>
+</body>
+</html>
