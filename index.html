@@ -1086,9 +1086,16 @@
     if(scriptUrl){
       try{
         const res = await fetch(scriptUrl + '?sheet=informes', {method:'GET'});
-        if(res.ok){
+        if(!res.ok){
+          toast('No se pudo leer la hoja de Informes (HTTP '+res.status+'). Se exportó sin esa pestaña.', true);
+        }else{
           const informes = await res.json();
-          if(Array.isArray(informes) && informes.length > 0){
+          if(!Array.isArray(informes)){
+            toast('La hoja de Informes devolvió un formato inesperado. Revisa la consola (F12).', true);
+            console.error('Respuesta inesperada de ?sheet=informes:', informes);
+          }else if(informes.length === 0){
+            toast('La hoja de Informes está vacía en Google Sheets — no hay nada que incluir todavía.', true);
+          }else{
             const informesRows = informes.map(inf=>{
               let sesionesTxt = '';
               try{
@@ -1118,7 +1125,8 @@
           }
         }
       }catch(err){
-        // si falla la carga de informes, se exporta igual sin esa hoja
+        toast('Error de red al leer Informes: '+err.message, true);
+        console.error('Error fetch ?sheet=informes:', err);
       }
     }
 
@@ -1183,7 +1191,7 @@
   // eventos que otras personas hayan agregado desde que abriste la página.
   setInterval(async ()=>{
     if(!scriptUrl) return;
-    if(document.hidden) return;
+    if(document.hidden) return;              
     if(editingId) return; // no interrumpir si alguien está editando un formulario
     try{
       const fresh = await apiLoad(scriptUrl);
