@@ -1043,7 +1043,7 @@
   });
 
   // ---------- EXCEL ----------
-  $('#btn-export').addEventListener('click', ()=>{
+  $('#btn-export').addEventListener('click', async ()=>{
     if(typeof XLSX === 'undefined'){ toast('La librería de Excel no cargó. Revisa tu conexión.', true); return; }
     if(events.length === 0){ toast('Agrega al menos un evento antes de exportar', true); return; }
 
@@ -1062,7 +1062,7 @@
     const porPais = {}; events.forEach(e=>porPais[e.pais]=(porPais[e.pais]||0)+1);
     const porEstado = {}; events.forEach(e=>porEstado[e.estado]=(porEstado[e.estado]||0)+1);
 
-    const informeRows = [
+    const resumenRows = [
       {Metrica:'Total de eventos registrados', Valor: events.length},
       {Metrica:'Tasa de asistencia', Valor: tasa},
       {Metrica:'', Valor:''},
@@ -1075,12 +1075,53 @@
       {Metrica:'— Por país —', Valor:''},
       ...Object.entries(porPais).map(([k,v])=>({Metrica:k, Valor:v})),
     ];
-    const wsInforme = XLSX.utils.json_to_sheet(informeRows, {skipHeader:false});
-    wsInforme['!cols'] = [{wch:26},{wch:14}];
+    const wsResumen = XLSX.utils.json_to_sheet(resumenRows, {skipHeader:false});
+    wsResumen['!cols'] = [{wch:26},{wch:14}];
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Eventos');
-    XLSX.utils.book_append_sheet(wb, wsInforme, 'Informe');
+    XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
+
+    // Hoja de Informes de transferencia de conocimiento (LAB-AIN09)
+    if(scriptUrl){
+      try{
+        const res = await fetch(scriptUrl + '?sheet=informes', {method:'GET'});
+        if(res.ok){
+          const informes = await res.json();
+          if(Array.isArray(informes) && informes.length > 0){
+            const informesRows = informes.map(inf=>{
+              let sesionesTxt = '';
+              try{
+                const ses = JSON.parse(inf.sesionesJSON || '[]');
+                sesionesTxt = ses.map(s=>`${s.sesion||''} (${s.ponente||''}) — ${s.tema||''}`).join(' | ');
+              }catch(e){}
+              let oportunidadesTxt = '';
+              try{
+                const op = JSON.parse(inf.oportunidadesJSON || '[]');
+                oportunidadesTxt = op.map((o,i)=>`Idea ${i+1}: ${o.descripcion||''} (Beneficio: ${o.beneficio||''}, Complejidad: ${o.complejidad||''})`).join(' | ');
+              }catch(e){}
+              return {
+                Evento: inf.eventoNombre, Responsable: inf.responsable, FechaEvento: inf.fecha,
+                CiudadPais: inf.ciudadPais, Modalidad: inf.modalidad, AreaRelacionada: inf.areaRelacionada,
+                Duracion: inf.duracion, EnlaceOficial: inf.enlaceOficial,
+                ResumenEjecutivo: inf.resumenEjecutivo,
+                SesionesDestacadas: sesionesTxt,
+                Tendencias: inf.tendencias,
+                OportunidadesLaboratorio: oportunidadesTxt,
+                SocializarConEquipo: inf.socializarEquipo, DuracionSocializacion: inf.duracionSocializacion,
+                EvidenciaLink: inf.evidenciaLink, EvidenciaDescripcion: inf.evidenciaDescripcion
+              };
+            });
+            const wsInformes = XLSX.utils.json_to_sheet(informesRows);
+            wsInformes['!cols'] = [{wch:26},{wch:18},{wch:12},{wch:18},{wch:12},{wch:14},{wch:14},{wch:26},{wch:40},{wch:40},{wch:26},{wch:40},{wch:14},{wch:16},{wch:26},{wch:26}];
+            XLSX.utils.book_append_sheet(wb, wsInformes, 'Informes');
+          }
+        }
+      }catch(err){
+        // si falla la carga de informes, se exporta igual sin esa hoja
+      }
+    }
+
     XLSX.writeFile(wb, `radar-eventos-latam-${todayStr()}.xlsx`);
     toast('Excel exportado');
   });
